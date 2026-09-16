@@ -185,3 +185,29 @@ jobs:
             echo "Tags: ${{ steps.meta.outputs.tags }}"
             echo "Digest: ${{ steps.build.outputs.digest }}"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Job 5: Threat Model Analysis (TP14) ────────────────
+  threat-modeling:
+    name: Threat Model Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Workspace
+        uses: actions/checkout@v4
+
+      - name: Run Threagile
+        id: threagile
+        uses: threagile/run-threagile-action@v1
+        with:
+          model-file: 'devops-tp12/threagile.yaml'
+
+      - name: Verify generated reports
+        run: |
+          test -s threagile/output/report.pdf
+          test -s threagile/output/data-flow-diagram.png
+
+      - name: Archive Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: threagile-report
+          path: threagile/output
+          if-no-files-found: error
