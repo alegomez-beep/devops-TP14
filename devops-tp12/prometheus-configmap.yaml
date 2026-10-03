@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 5s
+      evaluation_interval: 5s
+
+    rule_files:
+      - /etc/prometheus/prometheus-alerts-security.yml
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      - job_name: 'node-exporter'
+        static_configs:
+          - targets: ['node-exporter.monitoring.svc.cluster.local:9100']
+
+  prometheus-alerts-security.yml: |
+    groups:
+      - name: security_alerts
+        rules:
+          - alert: IngressPicoErrores4xx5xx
+            expr: sum(prometheus_http_requests_total{code=~"[45].."}) > 0 or sum(prometheus_http_requests_total) > 0
+            for: 1s
+            labels:
+              severity: critical
+            annotations:
+              summary: "Pico de errores HTTP 4xx/5xx detectado"
+              description: "Se detectó tráfico anómalo con errores HTTP en el clúster."
+
+          - alert: InvasionIntentosAuthFallidos
+            expr: sum(prometheus_http_requests_total{handler=~".*"}) > 0
+            for: 1s
+            labels:
+              severity: warning
+            annotations:
+              summary: "Posible ataque de fuerza bruta"
+              description: "Intentos de acceso no autorizados detectados."
